@@ -7,6 +7,7 @@ export default function SplashScreen({ show, onComplete }) {
       {show && (
         <motion.div
           className="splash-screen"
+          data-testid="splash-screen"
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.8, ease: "easeInOut" }}
