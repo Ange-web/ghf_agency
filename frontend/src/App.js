@@ -8,10 +8,14 @@ import Footer from "./components/Footer";
 import AuthModal from "./components/AuthModal";
 import HomePage from "./pages/HomePage";
 import EventsPage from "./pages/EventsPage";
+import EventDetailPage from "./pages/EventDetailPage";
 import GalleryPage from "./pages/GalleryPage";
 import BookingPage from "./pages/BookingPage";
 import ContestsPage from "./pages/ContestsPage";
 import ProfilePage from "./pages/ProfilePage";
+import AdminPage from "./pages/AdminPage";
+import TablePromoPage from "./pages/TablePromoPage";
+import TableVIPPage from "./pages/TableVIPPage";
 import { Toaster } from "./components/ui/sonner";
 
 function AppContent() {
@@ -39,7 +43,11 @@ function AppContent() {
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/events" element={<EventsPage />} />
-              <Route path="/gallery" element={<GalleryPage />} />
+              <Route path="/events/:eventId" element={<EventDetailPage />} />
+              <Route 
+                path="/gallery" 
+                element={<GalleryPage onAuthClick={() => setShowAuth(true)} />} 
+              />
               <Route 
                 path="/booking" 
                 element={<BookingPage onAuthClick={() => setShowAuth(true)} />} 
@@ -49,6 +57,15 @@ function AppContent() {
                 element={<ContestsPage onAuthClick={() => setShowAuth(true)} />} 
               />
               <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/admin" element={<AdminPage />} />
+              <Route 
+                path="/tables/promo" 
+                element={<TablePromoPage onAuthClick={() => setShowAuth(true)} />} 
+              />
+              <Route 
+                path="/tables/vip" 
+                element={<TableVIPPage onAuthClick={() => setShowAuth(true)} />} 
+              />
             </Routes>
           </main>
           

@@ -87,66 +87,83 @@ export default function EventCard({ event, featured = false }) {
   }
 
   return (
-    <motion.div
-      className="event-card rounded-xl overflow-hidden group"
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.5 }}
-      data-testid={`event-card-${event.id}`}
-    >
-      <div className="event-card-image">
-        <img
-          src={event.image_url || 'https://images.pexels.com/photos/11481894/pexels-photo-11481894.jpeg'}
-          alt={event.title}
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 gradient-overlay opacity-60" />
-        
-        {/* Price Tag */}
-        <div className="absolute top-4 right-4 bg-[#D4AF37] text-black px-3 py-1 text-sm font-bold rounded-full">
-          {formatPrice(event.price)}
+    <Link to={`/events/${event.id}`}>
+      <motion.div
+        className="event-card rounded-xl overflow-hidden group cursor-pointer"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5 }}
+        data-testid={`event-card-${event.id}`}
+      >
+        <div className="event-card-image">
+          <img
+            src={event.image_url || 'https://images.pexels.com/photos/11481894/pexels-photo-11481894.jpeg'}
+            alt={event.title}
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 gradient-overlay opacity-60" />
+          
+          {/* Price Tag */}
+          <div className="absolute top-4 right-4 bg-[#D4AF37] text-black px-3 py-1 text-sm font-bold rounded-full">
+            {formatPrice(event.price)}
+          </div>
+          
+          {/* Category */}
+          <div className="absolute top-4 left-4 bg-black/50 backdrop-blur-sm text-white/80 px-3 py-1 text-xs uppercase tracking-wider rounded-full">
+            {event.category}
+          </div>
+          
+          {/* Table badges */}
+          {(event.has_table_promo || event.has_table_vip) && (
+            <div className="absolute bottom-4 left-4 flex gap-2">
+              {event.has_table_promo && (
+                <span className="bg-[#FF2A85]/80 text-white px-2 py-0.5 text-xs rounded">
+                  Tables Promo
+                </span>
+              )}
+              {event.has_table_vip && (
+                <span className="bg-[#D4AF37]/80 text-black px-2 py-0.5 text-xs font-medium rounded">
+                  VIP
+                </span>
+              )}
+            </div>
+          )}
         </div>
         
-        {/* Category */}
-        <div className="absolute top-4 left-4 bg-black/50 backdrop-blur-sm text-white/80 px-3 py-1 text-xs uppercase tracking-wider rounded-full">
-          {event.category}
+        <div className="p-5">
+          <h3 className="text-xl font-bold text-white mb-2 group-hover:text-[#FF2A85] transition-colors">
+            {event.title}
+          </h3>
+          <p className="text-white/60 text-sm mb-4 line-clamp-2">
+            {event.description}
+          </p>
+          
+          <div className="flex flex-wrap gap-3 text-xs text-white/50 mb-4">
+            <span className="flex items-center gap-1.5">
+              <Calendar size={14} className="text-[#FF2A85]" />
+              {formatDate(event.date)}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <MapPin size={14} className="text-[#FF2A85]" />
+              {event.location}
+            </span>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-[#D4AF37]">
+              {event.available_spots} places restantes
+            </span>
+            <span
+              className="text-[#FF2A85] text-sm font-medium flex items-center gap-1 group-hover:gap-2 transition-all"
+              data-testid={`book-btn-${event.id}`}
+            >
+              Voir détails
+              <ArrowRight size={16} />
+            </span>
+          </div>
         </div>
-      </div>
-      
-      <div className="p-5">
-        <h3 className="text-xl font-bold text-white mb-2 group-hover:text-[#FF2A85] transition-colors">
-          {event.title}
-        </h3>
-        <p className="text-white/60 text-sm mb-4 line-clamp-2">
-          {event.description}
-        </p>
-        
-        <div className="flex flex-wrap gap-3 text-xs text-white/50 mb-4">
-          <span className="flex items-center gap-1.5">
-            <Calendar size={14} className="text-[#FF2A85]" />
-            {formatDate(event.date)}
-          </span>
-          <span className="flex items-center gap-1.5">
-            <MapPin size={14} className="text-[#FF2A85]" />
-            {event.location}
-          </span>
-        </div>
-        
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-[#D4AF37]">
-            {event.available_spots} places restantes
-          </span>
-          <Link
-            to={`/booking?event=${event.id}`}
-            className="text-[#FF2A85] text-sm font-medium flex items-center gap-1 hover:gap-2 transition-all"
-            data-testid={`book-btn-${event.id}`}
-          >
-            Réserver
-            <ArrowRight size={16} />
-          </Link>
-        </div>
-      </div>
-    </motion.div>
+      </motion.div>
+    </Link>
   );
 }

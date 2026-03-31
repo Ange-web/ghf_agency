@@ -131,6 +131,29 @@ class EventCreate(BaseModel):
     price: float = 0
     capacity: int = 100
     category: str = "party"
+    # Table options
+    has_table_promo: bool = False
+    table_promo_price: float = 150
+    table_promo_capacity: int = 10
+    has_table_vip: bool = False
+    table_vip_price: float = 300
+    table_vip_capacity: int = 5
+
+class EventUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    date: Optional[datetime] = None
+    location: Optional[str] = None
+    image_url: Optional[str] = None
+    price: Optional[float] = None
+    capacity: Optional[int] = None
+    category: Optional[str] = None
+    has_table_promo: Optional[bool] = None
+    table_promo_price: Optional[float] = None
+    table_promo_capacity: Optional[int] = None
+    has_table_vip: Optional[bool] = None
+    table_vip_price: Optional[float] = None
+    table_vip_capacity: Optional[int] = None
 
 class EventResponse(BaseModel):
     id: str
@@ -150,6 +173,17 @@ class ReservationCreate(BaseModel):
     event_id: str
     guests: int = 1
     phone: str
+    special_requests: Optional[str] = None
+    reservation_type: str = "standard"  # standard, table_promo, table_vip
+
+# Table Reservation Models
+class TableReservationCreate(BaseModel):
+    event_id: str
+    table_type: str  # "promo" or "vip"
+    name: str
+    phone: str
+    email: EmailStr
+    guests: int = 1
     special_requests: Optional[str] = None
 
 class ReservationResponse(BaseModel):
@@ -180,6 +214,15 @@ class GalleryItemResponse(BaseModel):
     url: str
     uploaded_by: str
     created_at: datetime
+
+# User Photo Submission Models
+class UserPhotoSubmit(BaseModel):
+    title: str
+    url: str
+    event_id: Optional[str] = None
+
+class PhotoApproval(BaseModel):
+    approved: bool
 
 # Contest Models
 class ContestCreate(BaseModel):
@@ -406,6 +449,14 @@ async def create_event(event: EventCreate, user: dict = Depends(get_current_user
         "capacity": event.capacity,
         "available_spots": event.capacity,
         "category": event.category,
+        "has_table_promo": event.has_table_promo,
+        "table_promo_price": event.table_promo_price,
+        "table_promo_capacity": event.table_promo_capacity,
+        "table_promo_available": event.table_promo_capacity if event.has_table_promo else 0,
+        "has_table_vip": event.has_table_vip,
+        "table_vip_price": event.table_vip_price,
+        "table_vip_capacity": event.table_vip_capacity,
+        "table_vip_available": event.table_vip_capacity if event.has_table_vip else 0,
         "created_at": datetime.now(timezone.utc)
     }
     await db.events.insert_one(event_doc)
@@ -413,6 +464,36 @@ async def create_event(event: EventCreate, user: dict = Depends(get_current_user
     event_doc["date"] = event_doc["date"].isoformat()
     event_doc["created_at"] = event_doc["created_at"].isoformat()
     return event_doc
+
+@api_router.put("/events/{event_id}")
+async def update_event(event_id: str, event: EventUpdate, user: dict = Depends(get_current_user)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    existing = await db.events.find_one({"id": event_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Event not found")
+    
+    update_data = {k: v for k, v in event.model_dump().items() if v is not None}
+    if update_data:
+        await db.events.update_one({"id": event_id}, {"$set": update_data})
+    
+    updated = await db.events.find_one({"id": event_id}, {"_id": 0})
+    if isinstance(updated.get("date"), datetime):
+        updated["date"] = updated["date"].isoformat()
+    if isinstance(updated.get("created_at"), datetime):
+        updated["created_at"] = updated["created_at"].isoformat()
+    return updated
+
+@api_router.delete("/events/{event_id}")
+async def delete_event(event_id: str, user: dict = Depends(get_current_user)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    result = await db.events.delete_one({"id": event_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Event not found")
+    return {"message": "Event deleted"}
 
 # ==================== RESERVATIONS ENDPOINTS ====================
 
@@ -434,6 +515,7 @@ async def create_reservation(reservation: ReservationCreate, user: dict = Depend
         "guests": reservation.guests,
         "phone": reservation.phone,
         "special_requests": reservation.special_requests,
+        "reservation_type": reservation.reservation_type,
         "status": "confirmed",
         "created_at": datetime.now(timezone.utc)
     }
@@ -447,6 +529,78 @@ async def create_reservation(reservation: ReservationCreate, user: dict = Depend
     reservation_doc.pop("_id", None)
     reservation_doc["created_at"] = reservation_doc["created_at"].isoformat()
     return reservation_doc
+
+# ==================== TABLE RESERVATIONS ====================
+
+@api_router.post("/tables/reserve")
+async def reserve_table(reservation: TableReservationCreate, user: dict = Depends(get_current_user)):
+    event = await db.events.find_one({"id": reservation.event_id})
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    
+    if reservation.table_type == "promo":
+        if not event.get("has_table_promo"):
+            raise HTTPException(status_code=400, detail="This event has no promo tables")
+        if event.get("table_promo_available", 0) <= 0:
+            raise HTTPException(status_code=400, detail="No promo tables available")
+        price = event.get("table_promo_price", 150)
+        decrement_field = "table_promo_available"
+    elif reservation.table_type == "vip":
+        if not event.get("has_table_vip"):
+            raise HTTPException(status_code=400, detail="This event has no VIP tables")
+        if event.get("table_vip_available", 0) <= 0:
+            raise HTTPException(status_code=400, detail="No VIP tables available")
+        price = event.get("table_vip_price", 300)
+        decrement_field = "table_vip_available"
+    else:
+        raise HTTPException(status_code=400, detail="Invalid table type")
+    
+    table_reservation = {
+        "id": str(uuid.uuid4()),
+        "event_id": reservation.event_id,
+        "event_title": event["title"],
+        "table_type": reservation.table_type,
+        "user_id": user["_id"],
+        "user_name": user["name"],
+        "name": reservation.name,
+        "phone": reservation.phone,
+        "email": reservation.email,
+        "guests": reservation.guests,
+        "special_requests": reservation.special_requests,
+        "price": price,
+        "status": "confirmed",
+        "created_at": datetime.now(timezone.utc)
+    }
+    
+    await db.table_reservations.insert_one(table_reservation)
+    await db.events.update_one({"id": reservation.event_id}, {"$inc": {decrement_field: -1}})
+    
+    table_reservation.pop("_id", None)
+    table_reservation["created_at"] = table_reservation["created_at"].isoformat()
+    return table_reservation
+
+@api_router.get("/tables/my")
+async def get_my_table_reservations(user: dict = Depends(get_current_user)):
+    reservations = await db.table_reservations.find(
+        {"user_id": user["_id"]}, {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    for r in reservations:
+        if isinstance(r.get("created_at"), datetime):
+            r["created_at"] = r["created_at"].isoformat()
+    return reservations
+
+@api_router.delete("/tables/{reservation_id}")
+async def cancel_table_reservation(reservation_id: str, user: dict = Depends(get_current_user)):
+    reservation = await db.table_reservations.find_one({"id": reservation_id})
+    if not reservation:
+        raise HTTPException(status_code=404, detail="Reservation not found")
+    if reservation["user_id"] != user["_id"] and user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    increment_field = "table_promo_available" if reservation["table_type"] == "promo" else "table_vip_available"
+    await db.events.update_one({"id": reservation["event_id"]}, {"$inc": {increment_field: 1}})
+    await db.table_reservations.delete_one({"id": reservation_id})
+    return {"message": "Table reservation cancelled"}
 
 @api_router.get("/reservations/my")
 async def get_my_reservations(user: dict = Depends(get_current_user)):
@@ -522,6 +676,96 @@ async def delete_gallery_item(item_id: str, user: dict = Depends(get_current_use
     
     await db.gallery.delete_one({"id": item_id})
     return {"message": "Item deleted"}
+
+# ==================== USER PHOTO SUBMISSIONS ====================
+
+@api_router.post("/photos/submit")
+async def submit_photo(photo: UserPhotoSubmit, user: dict = Depends(get_current_user)):
+    """User submits a photo for admin approval"""
+    event_name = None
+    if photo.event_id:
+        event = await db.events.find_one({"id": photo.event_id})
+        event_name = event["title"] if event else None
+    
+    photo_doc = {
+        "id": str(uuid.uuid4()),
+        "title": photo.title,
+        "url": photo.url,
+        "event_id": photo.event_id,
+        "event_name": event_name,
+        "user_id": user["_id"],
+        "user_name": user["name"],
+        "status": "pending",  # pending, approved, rejected
+        "created_at": datetime.now(timezone.utc)
+    }
+    await db.user_photos.insert_one(photo_doc)
+    photo_doc.pop("_id", None)
+    photo_doc["created_at"] = photo_doc["created_at"].isoformat()
+    return photo_doc
+
+@api_router.get("/photos/pending")
+async def get_pending_photos(user: dict = Depends(get_current_user)):
+    """Admin only: Get all pending photos"""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    photos = await db.user_photos.find({"status": "pending"}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    for p in photos:
+        if isinstance(p.get("created_at"), datetime):
+            p["created_at"] = p["created_at"].isoformat()
+    return photos
+
+@api_router.get("/photos/all")
+async def get_all_photos(user: dict = Depends(get_current_user)):
+    """Admin only: Get all photos with any status"""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    photos = await db.user_photos.find({}, {"_id": 0}).sort("created_at", -1).to_list(200)
+    for p in photos:
+        if isinstance(p.get("created_at"), datetime):
+            p["created_at"] = p["created_at"].isoformat()
+    return photos
+
+@api_router.put("/photos/{photo_id}/approve")
+async def approve_photo(photo_id: str, approval: PhotoApproval, user: dict = Depends(get_current_user)):
+    """Admin only: Approve or reject a photo"""
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    photo = await db.user_photos.find_one({"id": photo_id})
+    if not photo:
+        raise HTTPException(status_code=404, detail="Photo not found")
+    
+    new_status = "approved" if approval.approved else "rejected"
+    await db.user_photos.update_one({"id": photo_id}, {"$set": {"status": new_status}})
+    
+    # If approved, also add to main gallery
+    if approval.approved:
+        gallery_doc = {
+            "id": str(uuid.uuid4()),
+            "title": photo["title"],
+            "event_id": photo.get("event_id"),
+            "event_name": photo.get("event_name"),
+            "media_type": "image",
+            "url": photo["url"],
+            "uploaded_by": photo["user_name"],
+            "user_id": photo["user_id"],
+            "from_user_submission": True,
+            "created_at": datetime.now(timezone.utc)
+        }
+        await db.gallery.insert_one(gallery_doc)
+    
+    return {"message": f"Photo {new_status}"}
+
+@api_router.get("/photos/my")
+async def get_my_photos(user: dict = Depends(get_current_user)):
+    """Get current user's submitted photos"""
+    photos = await db.user_photos.find({"user_id": user["_id"]}, {"_id": 0}).sort("created_at", -1).to_list(50)
+    for p in photos:
+        if isinstance(p.get("created_at"), datetime):
+            p["created_at"] = p["created_at"].isoformat()
+    return photos
 
 # ==================== CONTESTS ENDPOINTS ====================
 
@@ -602,6 +846,40 @@ async def get_contest(contest_id: str):
         contest["created_at"] = contest["created_at"].isoformat()
     contest["is_active"] = datetime.fromisoformat(contest["end_date"].replace("Z", "+00:00")) > datetime.now(timezone.utc) if isinstance(contest["end_date"], str) else contest["end_date"] > datetime.now(timezone.utc)
     return contest
+
+@api_router.delete("/contests/{contest_id}")
+async def delete_contest(contest_id: str, user: dict = Depends(get_current_user)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    result = await db.contests.delete_one({"id": contest_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Contest not found")
+    return {"message": "Contest deleted"}
+
+# ==================== ADMIN ENDPOINTS ====================
+
+@api_router.get("/admin/reservations")
+async def get_all_reservations(user: dict = Depends(get_current_user)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    reservations = await db.reservations.find({}, {"_id": 0}).sort("created_at", -1).to_list(200)
+    for r in reservations:
+        if isinstance(r.get("created_at"), datetime):
+            r["created_at"] = r["created_at"].isoformat()
+    return reservations
+
+@api_router.get("/admin/table-reservations")
+async def get_all_table_reservations(user: dict = Depends(get_current_user)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    
+    reservations = await db.table_reservations.find({}, {"_id": 0}).sort("created_at", -1).to_list(200)
+    for r in reservations:
+        if isinstance(r.get("created_at"), datetime):
+            r["created_at"] = r["created_at"].isoformat()
+    return reservations
 
 # ==================== TESTIMONIALS ENDPOINTS ====================
 
@@ -690,6 +968,14 @@ async def seed_events():
                 "capacity": 500,
                 "available_spots": 500,
                 "category": "party",
+                "has_table_promo": True,
+                "table_promo_price": 150,
+                "table_promo_capacity": 10,
+                "table_promo_available": 10,
+                "has_table_vip": True,
+                "table_vip_price": 350,
+                "table_vip_capacity": 5,
+                "table_vip_available": 5,
                 "created_at": datetime.now(timezone.utc)
             },
             {
@@ -703,6 +989,14 @@ async def seed_events():
                 "capacity": 150,
                 "available_spots": 150,
                 "category": "vip",
+                "has_table_promo": True,
+                "table_promo_price": 200,
+                "table_promo_capacity": 8,
+                "table_promo_available": 8,
+                "has_table_vip": True,
+                "table_vip_price": 500,
+                "table_vip_capacity": 4,
+                "table_vip_available": 4,
                 "created_at": datetime.now(timezone.utc)
             },
             {
@@ -716,6 +1010,14 @@ async def seed_events():
                 "capacity": 800,
                 "available_spots": 800,
                 "category": "techno",
+                "has_table_promo": True,
+                "table_promo_price": 120,
+                "table_promo_capacity": 15,
+                "table_promo_available": 15,
+                "has_table_vip": True,
+                "table_vip_price": 280,
+                "table_vip_capacity": 6,
+                "table_vip_available": 6,
                 "created_at": datetime.now(timezone.utc)
             }
         ]

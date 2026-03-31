@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, User, LogOut, Calendar, Image, Trophy, Home } from 'lucide-react';
+import { Menu, X, User, LogOut, Calendar, Image, Trophy, Home, Shield } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 const navLinks = [
@@ -71,6 +71,16 @@ export default function Header({ onAuthClick }) {
           <div className="hidden md:flex items-center gap-4">
             {isAuthenticated ? (
               <div className="flex items-center gap-4">
+                {user?.role === 'admin' && (
+                  <Link
+                    to="/admin"
+                    className="flex items-center gap-2 text-sm text-[#D4AF37] hover:text-[#E5C048] transition-colors"
+                    data-testid="admin-link"
+                  >
+                    <Shield size={18} />
+                    <span>Admin</span>
+                  </Link>
+                )}
                 <Link
                   to="/profile"
                   className="flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors"
