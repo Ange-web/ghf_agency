@@ -1,0 +1,93 @@
+{
+  "theme": "dark",
+  "archetype": "Archetype 5 (Jewel & Luxury) + Neon Accents",
+  "design_philosophy": "A modern, creative, immersive, mobile-first experience blending the exclusive feel of a luxury VIP lounge with the high energy of a neon-lit nightclub. Tension is created through deep void blacks contrasting with vibrant hot pink and metallic gold.",
+  "colors": {
+    "background": "#050505",
+    "surface": "#0F0F13",
+    "surface_glass": "rgba(15, 15, 19, 0.7)",
+    "primary": "#FF2A85",
+    "primary_hover": "#E61E70",
+    "primary_foreground": "#FFFFFF",
+    "secondary": "#D4AF37",
+    "secondary_foreground": "#050505",
+    "muted": "#1A1A24",
+    "muted_foreground": "#A1A1AA",
+    "border": "rgba(255, 255, 255, 0.08)",
+    "ring": "#FF2A85"
+  },
+  "typography": {
+    "headings_font": "Clash Display, sans-serif",
+    "body_font": "Outfit, sans-serif",
+    "rules": [
+      "H1 must be massive (text-5xl to text-7xl fluid) with tracking-tighter and leading-none.",
+      "Headlines must never be centered by default; use asymmetric alignment.",
+      "Overlines/Subtitles must be uppercase, tracking-[0.2em], text-xs or text-sm, colored in secondary (Gold).",
+      "NEVER use Inter, Roboto, or generic sans-serif for headings."
+    ]
+  },
+  "spacing_and_layout": {
+    "padding_scale": "Generous: Use p-6, p-12, p-20. Vertical section padding should be py-24 or py-32.",
+    "grid_system": "Bento 'Tetris' Grid for gallery: asymmetric combinations of col-span-4 to col-span-8 to break monotony.",
+    "hero_section": "Fullscreen (min-h-screen). Background image MUST have an overlay of bg-black/50 to bg-black/70 to ensure text contrast. Never exceed 70% opacity.",
+    "alignment": "Mobile-first. Use optical alignment over strict geometric centering."
+  },
+  "components": {
+    "header": "Crystal Glassmorphism: sticky top-0 z-50, backdrop-blur-xl bg-black/60, border-b border-white/10.",
+    "cards": "Avoid default Shadcn Cards. Use flat, sharp-edged rectangular divs with 1px border-white/10. On hover: border-pink-500/50, scale-[1.02] transform, and drop-shadow-[0_0_15px_rgba(255,42,133,0.3)].",
+    "buttons": "Primary (Réserver): bg-[#FF2A85] text-white font-bold tracking-wide hover:bg-[#E61E70] transition-all. Secondary: Transparent with border-[#D4AF37] text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black.",
+    "forms": "Shadcn highly customized. Dark backgrounds (bg-surface), subtle white/10 borders, focus:ring-1 focus:ring-[#FF2A85].",
+    "marquee": "Use react-fast-marquee for an 'Editorial Ribbon' separating sections (e.g., 'UPCOMING EVENTS • VIP TABLES • EXCLUSIVE BOOKING'). High contrast or outline text."
+  },
+  "motion": {
+    "scroll": "Smooth scrolling is MANDATORY. Use framer-motion for scroll-triggered reveal animations.",
+    "interactions": "Micro-interactions on hover. For images inside cards, use overflow-hidden on parent and scale-110 on image hover with a slow transition (duration-700).",
+    "page_transitions": "Splash screen with logo fading out, followed by staggered fade-up of hero elements."
+  },
+  "media": {
+    "splash_bg": {
+      "url": "https://images.pexels.com/photos/14127764/pexels-photo-14127764.jpeg",
+      "description": "Dynamic neon light trails for splash screen background"
+    },
+    "hero_bg": {
+      "url": "https://images.unsplash.com/photo-1741767123174-a76960011e6c",
+      "description": "Abstract pink neon dark background for hero section"
+    },
+    "event_1": {
+      "url": "https://images.pexels.com/photos/11481894/pexels-photo-11481894.jpeg",
+      "description": "Energetic nightclub scene with DJ and crowd in vibrant pink lighting"
+    },
+    "event_2": {
+      "url": "https://images.unsplash.com/photo-1659273145161-fb9794dedd74",
+      "description": "Crowd of people at a concert/nightclub"
+    },
+    "event_3": {
+      "url": "https://images.pexels.com/photos/13230724/pexels-photo-13230724.jpeg",
+      "description": "Silhouettes of concert crowd enjoying vibrant lighting"
+    },
+    "vip_lounge": {
+      "url": "https://images.pexels.com/photos/18718691/pexels-photo-18718691.jpeg",
+      "description": "Chic modern lounge with dramatic red/pink lighting for VIP Booking section"
+    },
+    "dj_performing": {
+      "url": "https://images.pexels.com/photos/7446876/pexels-photo-7446876.jpeg",
+      "description": "DJ mixing tracks in a dimly lit club, for gallery or about section"
+    }
+  },
+  "accessibility": [
+    "Include data-testid on all interactive elements (e.g., data-testid='booking-submit-button').",
+    "Ensure contrast ratio >= 4.5:1 for body text.",
+    "Focus rings must be clearly visible on all inputs and interactive elements."
+  ],
+  "instructions_to_main_agent": [
+    "Install `lucide-react` for icons.",
+    "Install `framer-motion` for animations and page transitions.",
+    "Install `react-fast-marquee` for dynamic text ribbons.",
+    "Implement a dedicated Splash Screen component that shows the 'GHF_AGENCY' typography/logo, fading out before rendering the main layout.",
+    "Build the Gallery using a masonry grid layout (CSS columns or a masonry package).",
+    "Implement Google Login UI in the Auth modal/page alongside standard JWT forms.",
+    "Mock the Google Drive integration for the gallery upload feature.",
+    "Ensure all text is overlaid on media with appropriate gradient or solid opacity backgrounds to maintain readability.",
+    "DO NOT use generic placeholder URLs for images. Use the exact media URLs provided in this JSON."
+  ]
+}
